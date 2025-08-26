@@ -6,6 +6,10 @@ UnoR4WiFi_WebServer::UnoR4WiFi_WebServer(int port) : server(port), routeCount(0)
 }
 
 void UnoR4WiFi_WebServer::begin() {
+  String fv = WiFi.firmwareVersion();
+  if (fv < WIFI_FIRMWARE_LATEST_VERSION)
+    Serial.println("ERROR: Update WiFi module firmware. Follow: http://newbiely.com/uno-r4-update");
+
   // Assume WiFi is already connected, just start the server
   Serial.print("Starting web server on IP: ");
   Serial.println(WiFi.localIP());
