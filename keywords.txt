@@ -23,7 +23,13 @@ setNotFoundHandler	KEYWORD2
 handleClient	KEYWORD2
 sendResponse	KEYWORD2
 send404	KEYWORD2
+send401	KEYWORD2
 printWifiStatus	KEYWORD2
+
+# Authentication Methods
+enableAuthentication	KEYWORD2
+disableAuthentication	KEYWORD2
+isAuthenticationEnabled	KEYWORD2
 
 # WebSocket Methods
 enableWebSocket	KEYWORD2
