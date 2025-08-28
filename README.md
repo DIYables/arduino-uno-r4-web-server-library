@@ -65,6 +65,7 @@ References
 * [Web Server Query Strings Example](https://arduinogetstarted.com/reference/library/web-server-query-string-example)
 * [Web Server Json Example](https://arduinogetstarted.com/reference/library/web-server-json-example)
 * [Web Server With Web Socket Example](https://arduinogetstarted.com/reference/library/web-server-with-websocket-example)
+* [Web Server With Authentication Example](https://arduinogetstarted.com/reference/library/web-server-authentication-example)
 
 
 Tested Hardware
