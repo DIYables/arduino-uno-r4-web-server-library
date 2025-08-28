@@ -1,8 +1,13 @@
 #include "UnoR4WiFi_WebServer.h"
 #include "UnoR4WiFi_WebSocket.h"
 #include "NotFound_Default.h"
+#include "base64/Base64.h"
 
-UnoR4WiFi_WebServer::UnoR4WiFi_WebServer(int port) : server(port), routeCount(0), notFoundHandler(nullptr), webSocket(nullptr) {
+UnoR4WiFi_WebServer::UnoR4WiFi_WebServer(int port) : server(port), routeCount(0), notFoundHandler(nullptr), webSocket(nullptr), authEnabled(false) {
+  // Initialize authentication variables
+  memset(authUsername, 0, sizeof(authUsername));
+  memset(authPassword, 0, sizeof(authPassword));
+  strcpy(authRealm, "Arduino Server");
 }
 
 void UnoR4WiFi_WebServer::begin() {
@@ -149,7 +154,7 @@ void UnoR4WiFi_WebServer::handleClient() {
             continue;
           } else {
             // Process the request
-            processRequest(client, method, path, params, jsonData);
+            processRequest(client, method, path, params, jsonData, request);
             break;
           }
         } else if (headersComplete && isPost && contentLength > 0) {
@@ -179,7 +184,7 @@ void UnoR4WiFi_WebServer::handleClient() {
             Serial.print("JSON body: ");
             Serial.println(jsonData);
             
-            processRequest(client, method, path, params, jsonData);
+            processRequest(client, method, path, params, jsonData, request);
             break;
           }
         }
@@ -197,7 +202,13 @@ void UnoR4WiFi_WebServer::handleClient() {
   }
 }
 
-void UnoR4WiFi_WebServer::processRequest(WiFiClient& client, const String& method, const String& path, const QueryParams& params, const String& jsonData) {
+void UnoR4WiFi_WebServer::processRequest(WiFiClient& client, const String& method, const String& path, const QueryParams& params, const String& jsonData, const String& request) {
+  // Check authentication if enabled
+  if (authEnabled && !checkAuthentication(request)) {
+    send401(client);
+    return;
+  }
+  
   // Find matching route
   bool routeFound = false;
   for (int i = 0; i < routeCount; i++) {
@@ -276,6 +287,86 @@ void UnoR4WiFi_WebServer::handleWebSocket() {
   if (webSocket != nullptr) {
     webSocket->loop();
   }
+}
+
+// Authentication methods
+void UnoR4WiFi_WebServer::enableAuthentication(const char* username, const char* password, const char* realm) {
+  authEnabled = true;
+  strncpy(authUsername, username, MAX_AUTH_USERNAME_LENGTH - 1);
+  authUsername[MAX_AUTH_USERNAME_LENGTH - 1] = '\0';
+  strncpy(authPassword, password, MAX_AUTH_PASSWORD_LENGTH - 1);
+  authPassword[MAX_AUTH_PASSWORD_LENGTH - 1] = '\0';
+  strncpy(authRealm, realm, MAX_AUTH_REALM_LENGTH - 1);
+  authRealm[MAX_AUTH_REALM_LENGTH - 1] = '\0';
+  
+  Serial.println("Basic Authentication enabled");
+  Serial.print("Realm: ");
+  Serial.println(authRealm);
+}
+
+void UnoR4WiFi_WebServer::disableAuthentication() {
+  authEnabled = false;
+  Serial.println("Basic Authentication disabled");
+}
+
+bool UnoR4WiFi_WebServer::isAuthenticationEnabled() {
+  return authEnabled;
+}
+
+void UnoR4WiFi_WebServer::send401(WiFiClient& client) {
+  client.println("HTTP/1.1 401 Unauthorized");
+  client.print("WWW-Authenticate: Basic realm=\"");
+  client.print(authRealm);
+  client.println("\"");
+  client.println("Content-Type: text/html");
+  client.println("Connection: close");
+  client.println();
+  client.println("<!DOCTYPE html><html><head><title>401 Unauthorized</title></head>");
+  client.println("<body><h1>401 Unauthorized</h1>");
+  client.println("<p>Access to this resource requires authentication.</p>");
+  client.println("</body></html>");
+}
+
+bool UnoR4WiFi_WebServer::checkAuthentication(const String& request) {
+  // Look for Authorization header
+  int authIndex = request.indexOf("Authorization: Basic ");
+  if (authIndex == -1) {
+    return false; // No auth header found
+  }
+  
+  // Extract the base64 encoded credentials
+  int start = authIndex + 21; // "Authorization: Basic " length
+  int end = request.indexOf('\r', start);
+  if (end == -1) {
+    end = request.indexOf('\n', start);
+  }
+  if (end == -1) {
+    return false; // Malformed header
+  }
+  
+  String encodedCredentials = request.substring(start, end);
+  encodedCredentials.trim();
+  
+  // Create expected credentials string
+  String expectedCredentials = String(authUsername) + ":" + String(authPassword);
+  String expectedEncoded = base64Encode(expectedCredentials);
+  
+  // Compare credentials
+  return encodedCredentials.equals(expectedEncoded);
+}
+
+String UnoR4WiFi_WebServer::base64Encode(const String& input) {
+  // Use the existing Base64 library
+  int inputLen = input.length();
+  int outputLen = ((inputLen + 2) / 3) * 4;
+  char* output = new char[outputLen + 1];
+  
+  base64_encode(output, (char*)input.c_str(), inputLen);
+  output[outputLen] = '\0';
+  
+  String result = String(output);
+  delete[] output;
+  return result;
 }
 
 // WebSocket functionality temporarily disabled

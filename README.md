@@ -2,6 +2,7 @@
 This Arduino library provides an easy-to-use interface for creating **multi-page web servers** on the Arduino Uno R4 WiFi board and DIYables STEM V4 IoT.  
 It enables fast and reliable HTTP request handling, routing, and response generation for your web-based Arduino projects with **multiple interactive pages**.
 * **Multi-page web server support** with unlimited page routing capabilities
+* **HTTP Basic Authentication** for secure access control (optional, disabled by default)
 * Simple routing system with support for GET, POST, and other HTTP methods
 * Built-in query parameter parsing for dynamic content generation
 * JSON data handling for modern web API development
@@ -26,6 +27,7 @@ Product Link
 Features  
 ----------------------------  
 * **Multi-page web server** with unlimited routing capabilities
+* **HTTP Basic Authentication** for secure access control (optional, backward compatible)
 * **WebSocket server support** with real-time bidirectional communication
 * Simple HTTP server with routing capabilities
 * Query string parameter parsing 
@@ -44,7 +46,10 @@ Available Examples
 * **WebServer.ino**: **Multi-page web server** with routes for home, temperature, and LED control pages. Demonstrates fundamental routing and HTML template usage across multiple interconnected pages.
 * **WebServerJson.ino**: Advanced JSON API server example. Shows how to handle POST requests with JSON data and return JSON responses for RESTful API development.
 * **WebServerQueryStrings.ino**: Interactive **multi-page web server** demonstrating query parameter parsing. Features dynamic content generation based on URL parameters for temperature units and LED control with seamless page navigation.
-* **WebServerWithWebSocket.ino**: Advanced **multi-page web server** with real-time WebSocket communication. Demonstrates both HTTP and WebSocket functionality for live data exchange and real-time control.
+* **WebServerWithWebSocket.ino**: Advanced **multi-page web server** with real-time WebSocket communication using the integrated library. Demonstrates both HTTP and WebSocket functionality for live data exchange and real-time control.
+* **WebServerWithAuthentication.ino**: Simple web server with **HTTP Basic Authentication** protection. Shows how to enable/disable authentication and secure your Arduino web server with username/password protection.
+
+**📚 Documentation:** For detailed authentication setup, security considerations, and API reference, see [docs/Authentication.md](docs/Authentication.md)
 
 
 
@@ -71,4 +76,5 @@ Tested Hardware
 |-------------------------|:------:|---------------------------------------------|
 | Arduino Uno R4 WiFi     |   ✅   | Fully supported       |
 | [DIYables STEM V4 IoT](https://diyables.io/products/diyables-stem-v4-iot-fully-compatible-with-arduino-uno-r4-wifi) |   ✅   | Fully supported          |
+| [DIYables STEM V4 IoT Starter Kit](https://diyables.io/products/diyables-stem-v4-iot-starter-kit) |   ✅   | Fully supported          |
 

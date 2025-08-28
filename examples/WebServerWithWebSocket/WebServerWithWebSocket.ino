@@ -17,11 +17,69 @@
 // WiFi credentials
 const char WIFI_SSID[] = "YOUR_WIFI_SSID";
 const char WIFI_PASSWORD[] = "YOUR_WIFI_PASSWORD";
- 
-// Server configuration
-WiFiServer httpServer(80);
-constexpr uint16_t wsPort = 81;
-WebSocketServer wss{wsPort};
+
+// Create web server instance
+UnoR4WiFi_WebServer server;
+UnoR4WiFi_WebSocket* webSocket;
+
+// Page handlers
+void handleHome(WiFiClient& client, const String& method, const String& request, const QueryParams& params, const String& jsonData) {
+  server.sendResponse(client, htmlPage);
+}
+
+// WebSocket event handlers
+void onWebSocketOpen(net::WebSocket& ws) {
+  Serial.println("New WebSocket connection");
+  // Send welcome message
+  const char welcome[] = "Connected to Arduino Uno R4 WiFi!";
+  // Note: Individual client messaging will be handled differently in the integrated version
+}
+
+void onWebSocketMessage(net::WebSocket& ws, const net::WebSocket::DataType dataType, const char* message, uint16_t length) {
+  Serial.print("[WebSocket] Received (");
+  Serial.print(length);
+  Serial.print(" bytes): ");
+  Serial.println(message);
+  
+  String msgStr = String(message);
+  String response = "";
+  
+  // Command processing
+  if (msgStr.equalsIgnoreCase("ping")) {
+    response = "pong";
+  }
+  else if (msgStr.equalsIgnoreCase("hello")) {
+    response = "Hello from Arduino Uno R4 WiFi!";
+  }
+  else if (msgStr.equalsIgnoreCase("time")) {
+    response = "Uptime: " + String(millis()/1000) + " seconds";
+  }
+  else if (msgStr.equalsIgnoreCase("led on")) {
+    digitalWrite(LED_BUILTIN, HIGH);
+    response = "LED ON";
+  }
+  else if (msgStr.equalsIgnoreCase("led off")) {
+    digitalWrite(LED_BUILTIN, LOW);
+    response = "LED OFF";
+  }
+  else {
+    response = "Echo: " + msgStr;
+  }
+
+  Serial.print("[WebSocket] Sending response (");
+  Serial.print(response.length());
+  Serial.print(" bytes): ");
+  Serial.println(response);
+  
+  // Broadcast response to all connected clients using the library
+  if (webSocket != nullptr) {
+    webSocket->broadcastTXT(response);
+  }
+}
+
+void onWebSocketClose(net::WebSocket& ws, const net::WebSocket::CloseCode code, const char* reason, uint16_t length) {
+  Serial.println("WebSocket client disconnected");
+}
 
 void setup() {
   Serial.begin(9600);
@@ -33,81 +91,25 @@ void setup() {
   
   Serial.println("Arduino Uno R4 WiFi - WebSocket Server");
   
-  // Connect to WiFi
-  Serial.print("Connecting to ");
-  Serial.println(WIFI_SSID);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  // Configure web server routes
+  server.addRoute("/", handleHome);
   
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+  // Start web server with WiFi connection
+  server.begin(WIFI_SSID, WIFI_PASSWORD);
+  
+  // Enable WebSocket functionality
+  webSocket = server.enableWebSocket(81);
+  
+  if (webSocket != nullptr) {
+    // Set up WebSocket event handlers
+    webSocket->onOpen(onWebSocketOpen);
+    webSocket->onMessage(onWebSocketMessage);
+    webSocket->onClose(onWebSocketClose);
+    
+    Serial.println("WebSocket server started on port 81");
+  } else {
+    Serial.println("Failed to start WebSocket server");
   }
-
-  Serial.println(" connected!");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
-  
-  // Start HTTP server
-  httpServer.begin();
-  Serial.println("HTTP server started on port 80");
-  
-  // Configure WebSocket server
-  wss.onConnection([](WebSocket &ws) {
-    Serial.println("New WebSocket connection");
-     
-    // Set up message handler
-    ws.onMessage([](WebSocket &ws, const WebSocket::DataType dataType, const char *message, uint16_t length) {
-      Serial.print("[WebSocket] Received (");
-      Serial.print(length);
-      Serial.print(" bytes): ");
-      Serial.println(message);
-      
-      String msgStr = String(message);
-      String response = "";
-      
-      // Command processing
-      if (msgStr.equalsIgnoreCase("ping")) {
-        response = "pong";
-      }
-      else if (msgStr.equalsIgnoreCase("hello")) {
-        response = "Hello from Arduino Uno R4 WiFi!";
-      }
-      else if (msgStr.equalsIgnoreCase("time")) {
-        response = "Uptime: " + String(millis()/1000) + " seconds";
-      }
-      else if (msgStr.equalsIgnoreCase("led on")) {
-        digitalWrite(LED_BUILTIN, HIGH);
-        response = "LED ON";
-      }
-      else if (msgStr.equalsIgnoreCase("led off")) {
-        digitalWrite(LED_BUILTIN, LOW);
-        response = "LED OFF";
-      }
-      else {
-        response = "Echo: " + msgStr;
-      }
-
-      Serial.print("[WebSocket] sent (");
-      Serial.print(response.length());
-      Serial.print(" bytes): ");
-      Serial.println(response);
-      
-      // Send response
-      ws.send(WebSocket::DataType::TEXT, response.c_str(), response.length());
-    });
-    
-    ws.onClose([](WebSocket &ws, const WebSocket::CloseCode code, const char *reason, uint16_t length) {
-      Serial.println("WebSocket client disconnected");
-    });
-    
-    // Send welcome message
-    const char welcome[] = "Connected to Arduino Uno R4 WiFi!";
-    ws.send(WebSocket::DataType::TEXT, welcome, strlen(welcome));
-  });
-  
-  // Start WebSocket server
-  wss.begin();
-  Serial.println("WebSocket server started on port 81");
   
   Serial.println("\n=== WebSocket Server Ready! ===");
   Serial.print("Web page: http://");
@@ -118,42 +120,10 @@ void setup() {
   Serial.println("Commands: ping, hello, time, led on, led off");
 } 
  
-// HTTP request handler
-void handleHTTPClient(WiFiClient client) {
-  String request = "";
-  
-  // Read HTTP request
-  while (client.connected() && client.available()) {
-    String line = client.readStringUntil('\n');
-    if (line == "\r") break;
-    if (request.length() == 0) request = line;
-  }
-  
-  // Serve web page or 404
-  if (request.indexOf("GET / HTTP") >= 0) {
-    client.println("HTTP/1.1 200 OK");
-    client.println("Content-Type: text/html");
-    client.println("Connection: close");
-    client.println();
-    client.print(htmlPage);
-  } else {
-    client.println("HTTP/1.1 404 Not Found");
-    client.println("Connection: close");
-    client.println();
-  }
-  
-  client.stop();
-} 
-
 void loop() {
-  // Handle HTTP requests
-  WiFiClient httpClient = httpServer.available();
-  if (httpClient) {
-    handleHTTPClient(httpClient);
-  }
-  
-  // Handle WebSocket connections
-  wss.listen();
+  // Handle HTTP requests and WebSocket connections using the library
+  server.handleClient();
+  server.handleWebSocket();
   
   delay(10);
 }

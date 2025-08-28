@@ -2,6 +2,7 @@
 #define UNOR4_WIFI_WEBSERVER_H
 
 #include <WiFiS3.h>
+#include "base64/Base64.h"
 
 // Forward declare WebSocket class
 class UnoR4WiFi_WebSocket;
@@ -12,6 +13,9 @@ class UnoR4WiFi_WebSocket;
 #define MAX_QUERY_PARAMS 5
 #define MAX_PARAM_KEY_LENGTH 16
 #define MAX_PARAM_VALUE_LENGTH 16
+#define MAX_AUTH_USERNAME_LENGTH 32
+#define MAX_AUTH_PASSWORD_LENGTH 32
+#define MAX_AUTH_REALM_LENGTH 64
 
 // Structure to hold query parameters
 struct QueryParams {
@@ -38,6 +42,12 @@ public:
   void send404(WiFiClient& client);
   void printWifiStatus();
   
+  // Basic Authentication methods (disabled by default for backward compatibility)
+  void enableAuthentication(const char* username, const char* password, const char* realm = "Arduino Server");
+  void disableAuthentication();
+  bool isAuthenticationEnabled();
+  void send401(WiFiClient& client);
+  
   // WebSocket functionality
   UnoR4WiFi_WebSocket* enableWebSocket(uint16_t wsPort = 81);
   UnoR4WiFi_WebSocket* getWebSocket();
@@ -53,8 +63,17 @@ private:
   Route routes[MAX_ROUTES];
   int routeCount;
   RouteHandler notFoundHandler;
+  
+  // Authentication variables
+  bool authEnabled;
+  char authUsername[MAX_AUTH_USERNAME_LENGTH];
+  char authPassword[MAX_AUTH_PASSWORD_LENGTH];
+  char authRealm[MAX_AUTH_REALM_LENGTH];
+  
   void parseQueryString(const String& path, QueryParams& params);
-  void processRequest(WiFiClient& client, const String& method, const String& path, const QueryParams& params, const String& jsonData);
+  void processRequest(WiFiClient& client, const String& method, const String& path, const QueryParams& params, const String& jsonData, const String& request);
+  bool checkAuthentication(const String& request);
+  String base64Encode(const String& input);
 };
 
 // Include WebSocket functionality (automatically available but only compiled if used)
