@@ -253,57 +253,82 @@ bool WebSocket::_read(char *buffer, size_t size, size_t offset) {
   return true;
 }
 
-void WebSocket::_send(
-  uint8_t opcode, bool fin, bool mask, const char *data, uint16_t length) {
-  uint16_t bytesWritten{0};
-  bytesWritten += m_client.write(opcode | (fin ? 0x80 : 0x00));
 
-  if (length <= 125) {
-    bytesWritten +=
-      m_client.write((mask ? 0x80 : 0x00) | static_cast<char>(length));
-  } else if (length <= 0xFFFF) {
-    bytesWritten += m_client.write((mask ? 0x80 : 0x00) | 126);
-    bytesWritten += m_client.write(static_cast<char>(length >> 8) & 0xFF);
-    bytesWritten += m_client.write(static_cast<char>(length & 0xFF));
-  } else
-    return; // too big ...
+void WebSocket::_send(uint8_t opcode, bool fin, bool mask, const char *data, uint16_t length)
+{
+  // --- Build header (max 2 + 2 + 4 = 8 bytes for our sizes) ---
+  uint8_t hdr[10];
+  size_t hlen = 0;
 
-#ifdef _DUMP_HEADER
-  printf(F("TX FRAME : OPCODE=%u, FIN=%s, RSV=0, PAYLOAD-LEN=%u, MASK="),
-    opcode, fin ? "True" : "False", length);
-#endif
+  hdr[hlen++] = (uint8_t)(opcode | (fin ? 0x80 : 0x00));
 
-  if (mask) {
-    char maskingKey[4]{};
-    generateMask(maskingKey);
-
-#ifdef _DUMP_HEADER
-    printf(F("%x%x%x%x\n"), maskingKey[0], maskingKey[1], maskingKey[2],
-      maskingKey[3]);
-#endif
-
-    bytesWritten += m_client.write(maskingKey, 4);
-    for (uint16_t i = 0; i < length; ++i)
-      bytesWritten +=
-        m_client.write(static_cast<char>(data[i] ^ maskingKey[i % 4]));
-  } else {
-#ifdef _DUMP_HEADER
-    printf(F("None\n"));
-#endif
-
-    if (length) {
-      bytesWritten +=
-        m_client.write(reinterpret_cast<const char *>(data), length);
-    }
+  if (length <= 125)
+  {
+    hdr[hlen++] = (uint8_t)((mask ? 0x80 : 0x00) | (uint8_t)length);
+  }
+  else if (length <= 0xFFFF)
+  {
+    hdr[hlen++] = (uint8_t)((mask ? 0x80 : 0x00) | 126);
+    hdr[hlen++] = (uint8_t)((length >> 8) & 0xFF);
+    hdr[hlen++] = (uint8_t)(length & 0xFF);
+  }
+  else
+  {
+    // (you don't use >64k, so bail)
+    return;
   }
 
-#ifdef _DUMP_FRAME_DATA
-  if (length) printf(F("%s\n"), data);
-#endif
+  // Allocate a contiguous buffer: [header | key | masked payload]
+  // For telemetry (~92 bytes) this is tiny. Use static to avoid big stack frames:
+  static uint8_t txbuf[10 + 4 + 512]; // adjust 512 to your maximum payload
 
-#ifdef _DUMP_HEADER
-  printf(F("TX BYTES = %u\n"), bytesWritten);
-#endif
+  if (!mask)
+  {
+    if (sizeof(txbuf) < hlen + length)
+      return; // safety
+
+    // copy header
+    memcpy(txbuf, hdr, hlen);
+
+    // copy data
+    memcpy(txbuf + hlen, (const uint8_t *)data, length);
+
+    // Standards-compliant clients MUST mask. Only use this if your server accepts unmasked.
+    // Single write for header + payload helps reduce SPI transactions:
+    m_client.write(txbuf, hlen + length);
+  }
+  else
+  {
+
+    // --- Masked path (RFC-compliant) ---
+    // Generate 4-byte masking key:
+    uint8_t key[4];
+    generateMask((char *)key); // your existing function, reusing its entropy source
+
+    // Write header + key in one go if possible.
+    // We’ll assemble a single contiguous TX buffer to minimize SPI transactions.
+    // If you prefer zero extra copy, you can do two writes (hdr+key, then payload), but one write is fastest.
+
+
+    if (sizeof(txbuf) < hlen + 4 + length)
+      return; // safety
+
+    // copy header
+    memcpy(txbuf, hdr, hlen);
+    // copy key
+    memcpy(txbuf + hlen, key, 4);
+
+    // XOR-mask into the tx buffer
+    uint8_t *out = txbuf + hlen + 4;
+    const uint8_t *in = (const uint8_t *)data;
+    for (uint16_t i = 0; i < length; ++i)
+    {
+      out[i] = (uint8_t)(in[i] ^ key[i & 3]);
+    }
+
+    // **One** write for everything
+    m_client.write(txbuf, hlen + 4 + length);
+  }
 }
 
 void WebSocket::_readFrame() {
