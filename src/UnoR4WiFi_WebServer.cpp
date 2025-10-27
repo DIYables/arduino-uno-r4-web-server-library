@@ -34,7 +34,7 @@ void UnoR4WiFi_WebServer::beginAP(const char* ssid, const char* pass) {
     while (true);
   }
 
-  status = WiFi.status();
+  int status = WiFi.status();
   if (status != WL_AP_LISTENING) {
     Serial.print("WiFi status should be ");
     Serial.print(WL_AP_LISTENING); 
