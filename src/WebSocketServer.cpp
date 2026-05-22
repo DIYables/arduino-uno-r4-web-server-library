@@ -1,14 +1,14 @@
 /*
  * WebSocketServer.cpp
- * 
+ *
  * Originally from mWebSockets library by skaarj1989
  * https://github.com/skaarj1989/mWebSockets
- * 
+ *
  * Modified for Arduino Uno R4 WiFi compatibility
- * - Removed multi-platform support 
+ * - Removed multi-platform support
  * - Simplified for WiFiS3 library only
  * - Removed Ethernet controller support
- * 
+ *
  * Original license: LGPL-2.1 License
  */
 
@@ -118,12 +118,11 @@ bool WebSocketServer::_handleRequest(
     __debugOutput(F("."));
   }
 
-  // Large enought to hold the longest header field
-  //  Chrome: 'User-Agent' = ~126 characters
-  //  Edge: 'User-Agent' = ~141 characters
-  //  Firefox: 'User-Agent' = ~90 characters
-  //  Opera: 'User-Agent' = ~145 characters
+  // Large enough to hold the longest WebSocket-relevant header field.
+  // Lines that exceed this (e.g. edge case clients User-Agent ~240+ chars) are
+  // silently skipped - they are not relevant to the WebSocket handshake.
   char buffer[160]{};
+  bool lineOverflow{false};
 
   char secKey[32]{}; // Holds client Sec-WebSocket-Key
   uint8_t flags{0};
@@ -131,12 +130,18 @@ bool WebSocketServer::_handleRequest(
 
   int32_t bite{-1};
   byte currentLine{0};
-  byte counter{0};
+  uint16_t counter{0};
 
   while ((bite = client.read()) != -1) {
-    buffer[counter++] = bite;
+    if (counter < sizeof(buffer) - 1) {
+      buffer[counter] = static_cast<char>(bite);
+    } else {
+      lineOverflow = true;
+    }
+    counter++;
 
     if (bite == '\n') {
+      if (!lineOverflow) {
       const auto lineBreakPos = static_cast<uint8_t>(strcspn(buffer, "\r\n"));
       buffer[lineBreakPos] = '\0';
 #ifdef _DUMP_HANDSHAKE
@@ -262,8 +267,11 @@ bool WebSocketServer::_handleRequest(
         }
       }
 
+      } // end if (!lineOverflow)
+      // Long header lines (e.g. User-Agent) are safely ignored
       memset(buffer, '\0', sizeof(buffer));
       counter = 0;
+      lineOverflow = false;
       ++currentLine;
     }
   }
