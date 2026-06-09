@@ -13,7 +13,7 @@ It enables fast and reliable HTTP request handling, routing, and response genera
 
 With this library, you can easily create professional **multi-page web interfaces** and APIs for your Arduino Uno R4 WiFi and DIYables STEM V4 IoT projects, allowing users to navigate between different pages seamlessly.
 
-![Arduino Uno R4 WiFi and DIYables STEM V4 IoT](https://diyables.io/images/products/arduino-uno-r4-wifi-and-diyables-stem-v4-iot.jpg)
+![Arduino Uno R4 WiFi and DIYables STEM V4 IoT](https://newbiely.com/images/tutorial/arduino-uno-r4-wifi-compatible-boards.jpg)
 
 
 
@@ -21,6 +21,7 @@ Product Link
 ----------------------------
 * [Arduino Uno R4 WiFi](https://store.arduino.cc/products/uno-r4-wifi)
 * [DIYables STEM V4 IoT](https://diyables.io/products/diyables-stem-v4-iot-fully-compatible-with-arduino-uno-r4-wifi)
+* [DIYables STEM V4B IoT](https://diyables.io/products/diyables-stem-v4b-iot-development-board-compatible-with-arduino-uno-r4-wifi-ra4m1-32-bit-arm-cortex-m4-with-esp32-s3-wifi-bluetooth-usb-c-for-learning-prototyping-education)
 
 
 
@@ -75,5 +76,6 @@ Tested Hardware
 |-------------------------|:------:|---------------------------------------------|
 | Arduino Uno R4 WiFi     |   ✅   | Fully supported       |
 | [DIYables STEM V4 IoT](https://diyables.io/products/diyables-stem-v4-iot-fully-compatible-with-arduino-uno-r4-wifi) |   ✅   | Fully supported          |
+| [DIYables STEM V4B IoT](https://diyables.io/products/diyables-stem-v4b-iot-development-board-compatible-with-arduino-uno-r4-wifi-ra4m1-32-bit-arm-cortex-m4-with-esp32-s3-wifi-bluetooth-usb-c-for-learning-prototyping-education) |   ✅   | Fully supported          |
 | [DIYables STEM V4 IoT Starter Kit](https://diyables.io/products/diyables-stem-v4-iot-starter-kit) |   ✅   | Fully supported          |
 
