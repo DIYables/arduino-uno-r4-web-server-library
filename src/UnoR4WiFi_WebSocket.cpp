@@ -59,9 +59,9 @@ bool UnoR4WiFi_WebSocket::begin() {
     return false;
   }
   
-  // Check if WiFi is connected
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("WiFi not connected! Cannot start WebSocket server.");
+  // Check if WiFi is ready
+  if (WiFi.localIP() == INADDR_NONE) {
+    Serial.println("WiFi does not have an IP address assigned! Cannot start WebSocket server.");
     return false;
   }
   

@@ -35,6 +35,7 @@ public:
   UnoR4WiFi_WebServer(int port = 80);
   void begin();  // Start server assuming WiFi is already connected
   void begin(const char* ssid, const char* pass);  // Connect to WiFi and start server
+  void beginAP(const char* ssid, const char* pass); // Start Access Point and start server
   void addRoute(const char* path, RouteHandler handler);
   void setNotFoundHandler(RouteHandler handler);
   void handleClient();

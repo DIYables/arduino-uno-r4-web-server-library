@@ -21,6 +21,30 @@ void UnoR4WiFi_WebServer::begin() {
   server.begin();
 }
 
+void UnoR4WiFi_WebServer::beginAP(const char* ssid, const char* pass) {
+  // print the network name (SSID);
+  Serial.print("Creating access point named: ");
+  Serial.println(ssid);
+
+  // Create open network. Change this line if you want to create an WEP network:
+  bool beginok = WiFi.beginAP(ssid, pass);
+  if (!beginok) {
+    Serial.println("Creating access point failed");
+    // don't continue
+    while (true);
+  }
+
+  int status = WiFi.status();
+  if (status != WL_AP_LISTENING) {
+    Serial.print("WiFi status should be ");
+    Serial.print(WL_AP_LISTENING); 
+    Serial.print(" (WL_AP_LISTENING) but is ");
+    Serial.println(status);
+  }
+
+  begin();
+}
+
 void UnoR4WiFi_WebServer::begin(const char* ssid, const char* pass) {
   Serial.begin(9600);
 
