@@ -91,7 +91,7 @@ void UnoR4WiFi_WebServer::handleClient() {
     String request = "";
     String method = "";
     bool currentLineIsBlank = true;
-    bool isPost = false;
+    bool isPostOrPut = false;
     bool headersComplete = false;
     int contentLength = 0;
 
@@ -110,11 +110,11 @@ void UnoR4WiFi_WebServer::handleClient() {
           String path = firstLine.substring(start, end);
           method = firstLine.substring(0, firstLine.indexOf(' '));
 
-          // Check if it's a POST request
-          isPost = (method == "POST");
+          // Check if it's a POST/PUT request
+          isPostOrPut = (method == "POST" || method == "PUT");
 
-          // Extract Content-Length for POST requests
-          if (isPost) {
+          // Extract Content-Length for POST/PUT requests
+          if (isPostOrPut) {
             int contentLengthIndex = request.indexOf("Content-Length: ");
             if (contentLengthIndex != -1) {
               int start = contentLengthIndex + 16;
@@ -147,9 +147,9 @@ void UnoR4WiFi_WebServer::handleClient() {
             Serial.println(params.params[i].value);
           }
 
-          // For POST requests, continue reading to get the body
+          // For POST/PUT requests, continue reading to get the body
           String jsonData = "";
-          if (isPost && contentLength > 0) {
+          if (isPostOrPut && contentLength > 0) {
             // Continue reading the body
             continue;
           } else {
@@ -157,7 +157,7 @@ void UnoR4WiFi_WebServer::handleClient() {
             processRequest(client, method, path, params, jsonData, request);
             break;
           }
-        } else if (headersComplete && isPost && contentLength > 0) {
+        } else if (headersComplete && isPostOrPut && contentLength > 0) {
           // We're reading the body now
           static String bodyData = "";
           bodyData += c;
